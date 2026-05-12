@@ -5,9 +5,6 @@ const Fuse = require("fuse.js");
 
 const app = express();
 
-app.use(express.json());
-app.use(express.static("public"));
-
 app.use(cors());
 app.use(express.json());
 
@@ -16,56 +13,21 @@ const SHEET_NAME = "Sheet1";
 
 async function getData() {
 
-    const url = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
+  const url =
+    `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
 
-    const response = await axios.get(url);
+  const response = await axios.get(url);
 
-    return response.data;
+  return response.data;
 }
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
 
-app.get("/chat", async (req, res) => {
-
-    const userMessage = req.query.message;
-
-    const data = await getData();
-
-    const fuse = new Fuse(data, {
-        keys: ["question"],
-        threshold: 0.4
-    });
-
-    const result = fuse.search(userMessage);
-
-    if(result.length > 0){
-
-        res.json({
-            reply: result[0].item.answer
-        });
-
-    }else{
-
-        res.json({
-            reply: "Xin lỗi, tôi chưa hiểu."
-        });
-
-    }
-
-});
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Bot đang chạy trên cổng ${PORT}`);
-});
-app.get("/", (req, res) => {
   res.send(`
     <html>
       <body>
-        <h2>Chatbot</h2>
+
+        <h2>Chatbot AI</h2>
 
         <input id="msg" />
         <button onclick="send()">Gửi</button>
@@ -73,6 +35,7 @@ app.get("/", (req, res) => {
         <div id="chat"></div>
 
         <script>
+
           async function send() {
 
             const msg =
@@ -94,8 +57,58 @@ app.get("/", (req, res) => {
               "<p><b>Bạn:</b> " + msg + "</p>" +
               "<p><b>Bot:</b> " + data.reply + "</p>";
           }
+
         </script>
+
       </body>
     </html>
   `);
+
+});
+
+app.post("/chat", async (req, res) => {
+
+  try {
+
+    const userMessage = req.body.message;
+
+    const data = await getData();
+
+    const fuse = new Fuse(data, {
+      keys: ["question"],
+      threshold: 0.4
+    });
+
+    const result = fuse.search(userMessage);
+
+    if (result.length > 0) {
+
+      res.json({
+        reply: result[0].item.answer
+      });
+
+    } else {
+
+      res.json({
+        reply: "Xin lỗi, tôi chưa hiểu."
+      });
+
+    }
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.json({
+      reply: "Lỗi server"
+    });
+
+  }
+
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Bot đang chạy trên cổng ${PORT}`);
 });
