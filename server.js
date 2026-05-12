@@ -5,6 +5,9 @@ const Fuse = require("fuse.js");
 
 const app = express();
 
+app.use(express.json());
+app.use(express.static("public"));
+
 app.use(cors());
 app.use(express.json());
 
@@ -21,7 +24,7 @@ async function getData() {
 }
 
 app.get("/", (req, res) => {
-    res.send("Chatbot đang hoạt động!");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.get("/chat", async (req, res) => {
