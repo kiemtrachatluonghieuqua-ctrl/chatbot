@@ -58,3 +58,41 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Bot đang chạy trên cổng ${PORT}`);
 });
+app.get("/", (req, res) => {
+  res.send(`
+    <html>
+      <body>
+        <h2>Chatbot</h2>
+
+        <input id="msg" />
+        <button onclick="send()">Gửi</button>
+
+        <div id="chat"></div>
+
+        <script>
+          async function send() {
+
+            const msg =
+              document.getElementById("msg").value;
+
+            const res = await fetch("/chat", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                message: msg
+              })
+            });
+
+            const data = await res.json();
+
+            document.getElementById("chat").innerHTML +=
+              "<p><b>Bạn:</b> " + msg + "</p>" +
+              "<p><b>Bot:</b> " + data.reply + "</p>";
+          }
+        </script>
+      </body>
+    </html>
+  `);
+});
