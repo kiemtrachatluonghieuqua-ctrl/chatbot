@@ -8,7 +8,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const SHEET_ID = "1Af13VPgO-vr_DOeJ-7nBJh9wDBb9PHY-ls9dez2piG4";
+const SHEET_ID =
+  "1Af13VPgO-vr_DOeJ-7nBJh9wDBb9PHY-ls9dez2piG4";
+
 const SHEET_NAME = "Sheet1";
 
 async function getData() {
@@ -25,12 +27,16 @@ app.get("/", (req, res) => {
 
   res.send(`
     <html>
+
       <body>
 
         <h2>Chatbot AI</h2>
 
         <input id="msg" />
-        <button onclick="send()">Gửi</button>
+
+        <button onclick="send()">
+          Gửi
+        </button>
 
         <div id="chat"></div>
 
@@ -42,13 +48,17 @@ app.get("/", (req, res) => {
               document.getElementById("msg").value;
 
             const res = await fetch("/chat", {
+
               method: "POST",
+
               headers: {
                 "Content-Type": "application/json"
               },
+
               body: JSON.stringify({
                 message: msg
               })
+
             });
 
             const data = await res.json();
@@ -61,6 +71,7 @@ app.get("/", (req, res) => {
         </script>
 
       </body>
+
     </html>
   `);
 
@@ -110,5 +121,9 @@ app.post("/chat", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`Bot đang chạy trên cổng ${PORT}`);
+
+  console.log(
+    `Bot đang chạy trên cổng ${PORT}`
+  );
+
 });
