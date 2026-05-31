@@ -65,21 +65,81 @@ app.post("/chat", async (req, res) => {
   try {
     const userMessage = String(req.body.message || "").trim();
 
+    console.log("USER INPUT:", userMessage);
+
     const data = await getData();
 
+    const isHSCode = /^\d{6,12}$/.test(userMessage);
+
+    if (isHSCode) {
+      const exactHS = data.find(item =>
+        String(item.question || "").trim() === userMessage
+      );
+
+      if (exactHS) {
+        return res.json({
+          reply: buildReply(exactHS)
+        });
+      }
+
+      return res.json({
+        reply: `HS code ${userMessage} không thuộc diện kiểm tra chất lượng.`
+      });
+    }
+
+    const exactQuestion = data.find(item =>
+      String(item.question || "")
+        .trim()
+        .toLowerCase() === userMessage.toLowerCase()
+    );
+
+    if (exactQuestion) {
+      return res.json({
+        reply: buildReply(exactQuestion)
+      });
+    }
+
+    const searchData = data.filter(item => {
+      const question = String(item.question || "").trim();
+      return !/^\d{6,12}$/.test(question);
+    });
+
+    const preparedData = searchData.map(item => ({
+      ...item,
+      keywords: [item.question || "", item.node || ""].join(" ")
+    }));
+
+    const fuse = new Fuse(preparedData, {
+      keys: [
+        { name: "question", weight: 0.7 },
+        { name: "keywords", weight: 0.3 }
+      ],
+      threshold: 0.3,
+      ignoreLocation: true,
+      includeScore: true,
+      minMatchCharLength: 2
+    });
+
+    const results = fuse.search(userMessage);
+
+    if (results.length > 0 && results[0].score < 0.4) {
+      return res.json({
+        reply: buildReply(results[0].item)
+      });
+    }
+
     return res.json({
-      reply: `OK: ${userMessage} - Rows: ${data.length}`
+      reply: "Xin lỗi, tôi chưa tìm thấy thông tin phù hợp."
     });
 
   } catch (error) {
     console.error(error);
 
     return res.json({
-      reply: "Lỗi server"
+      reply: "Lỗi server, vui lòng thử lại."
     });
   }
-});
-    // ====================================
+});    // ====================================
     // TRA CỨU HS CODE CHÍNH XÁC TUYỆT ĐỐI
     // ====================================
 
