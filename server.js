@@ -13,8 +13,10 @@ const SHEET_ID =
 
 const SHEET_NAME = "Sheet1";
 
+// =========================
+// LẤY DỮ LIỆU TỪ GOOGLE SHEET
+// =========================
 async function getData() {
-
   const url =
     `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
 
@@ -23,298 +25,229 @@ async function getData() {
   return response.data;
 }
 
-app.get("/", (req, res) => {
+// =========================
+// TẠO CÂU TRẢ LỜI
+// =========================
+function buildReply(item) {
+  let reply = item.answer || "";
 
-  res.send(`
+  if (item.related) {
+    const related = item.related
+      .split(";")
+      .map(x => x.trim())
+      .filter(Boolean);
 
-<!DOCTYPE html>
+    if (related.length > 0) {
+      reply +=
+        "<br><br><b>Có thể bạn muốn hỏi thêm:</b><br>";
 
-<html lang="vi">
-
-<head>
-
-<meta charset="UTF-8">
-
-<title>Chatbot AI</title>
-
-<style>
-
-body{
-  font-family: Arial;
-  background:#f4f4f4;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-}
-
-.chat-container{
-  width:400px;
-  background:white;
-  border-radius:15px;
-  overflow:hidden;
-  box-shadow:0 0 10px rgba(0,0,0,0.2);
-}
-
-.header{
-  background:#4a90e2;
-  color:white;
-  padding:15px;
-  font-size:20px;
-  text-align:center;
-}
-
-.chat-box{
-  height:400px;
-  overflow-y:auto;
-  padding:10px;
-  background:#fafafa;
-}
-
-.message{
-  margin:10px 0;
-  padding:10px;
-  border-radius:10px;
-  max-width:80%;
-}
-
-.user{
-  background:#4a90e2;
-  color:white;
-  margin-left:auto;
-}
-
-.bot{
-  background:#e5e5ea;
-}
-
-.input-area{
-  display:flex;
-  border-top:1px solid #ddd;
-}
-
-input{
-  flex:1;
-  padding:15px;
-  border:none;
-  outline:none;
-  font-size:16px;
-}
-
-button{
-  width:80px;
-  border:none;
-  background:#4a90e2;
-  color:white;
-  font-size:16px;
-  cursor:pointer;
-}
-
-button:hover{
-  background:#357bd8;
-}
-
-.time{
-  font-size:11px;
-  opacity:0.7;
-  margin-top:5px;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="chat-container">
-
-<div class="header">
-  Chatbot AI
-</div>
-
-<div class="chat-box" id="chat"></div>
-
-<div class="input-area">
-
-  <input
-    type="text"
-    id="msg"
-    placeholder="Nhập tin nhắn..."
-  >
-
-  <button onclick="send()">
-    Gửi
-  </button>
-
-</div>
-
-</div>
-
-<script>
-
-const input =
-  document.getElementById("msg");
-
-const chat =
-  document.getElementById("chat");
-
-input.addEventListener("keypress", function(event){
-
-  if(event.key === "Enter"){
-    send();
-  }
-
-});
-
-function getTime(){
-
-  const now = new Date();
-
-  return now.getHours() + ":" +
-         String(now.getMinutes()).padStart(2,"0");
-}
-
-function addMessage(text, type){
-
-  const div =
-    document.createElement("div");
-
-  div.className =
-    "message " + type;
-
-  div.innerHTML =
-    text +
-    '<div class="time">' +
-    getTime() +
-    '</div>';
-
-  chat.appendChild(div);
-
-  chat.scrollTop =
-    chat.scrollHeight;
-}
-
-async function send(){
-
-  const msg = input.value.trim();
-
-  if(!msg) return;
-
-  addMessage(msg, "user");
-
-  input.value = "";
-
-  addMessage("Đang trả lời...", "bot");
-
-  const loading =
-    chat.lastChild;
-
-  try{
-
-    const res =
-      await fetch("/chat", {
-
-        method:"POST",
-
-        headers:{
-          "Content-Type":"application/json"
-        },
-
-        body:JSON.stringify({
-          message:msg
-        })
-
+      related.forEach(q => {
+        reply += `• ${q}<br>`;
       });
-
-    const data =
-      await res.json();
-
-    loading.remove();
-
-    addMessage(data.reply, "bot");
-
-  }catch(error){
-
-    loading.remove();
-
-    addMessage(
-      "Lỗi kết nối server",
-      "bot"
-    );
-
+    }
   }
 
+  return reply;
 }
 
-</script>
-
-</body>
-
-</html>
-
-  `);
-
+// =========================
+// TRANG CHỦ
+// =========================
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/index.html");
 });
 
+// =========================
+// CHAT API
+// =========================
 app.post("/chat", async (req, res) => {
 
-  try {
+  return res.json({
+    reply: "TEST VERSION 999999"
+  });
 
-    const userMessage =
-      req.body.message;
+});
 
-    const data =
-      await getData();
+    console.log("USER INPUT:", userMessage);
 
-    const fuse = new Fuse(data, {
+    const data = await getData();
+console.log("FIRST ROW:", data[0]);
+console.log("SECOND ROW:", data[1]);
+    // ====================================
+    // TRA CỨU HS CODE CHÍNH XÁC TUYỆT ĐỐI
+    // ====================================
 
-      keys: ["question"],
+    const isHSCode =
+      /^\d{6,12}$/.test(userMessage);
 
-      threshold: 0.6,
+    if (isHSCode) {
 
-      ignoreLocation: true,
+      const exactHS = data.find(item => {
 
-      minMatchCharLength: 2
+  const question =
+    String(item.question || "").trim();
 
-    });
+  console.log(
+    "QUESTION:",
+    question,
+    "| USER:",
+    userMessage
+  );
 
-    const result =
-      fuse.search(userMessage);
+  return question === userMessage;
 
-    if (result.length > 0) {
+});
 
-      res.json({
-        reply: result[0].item.answer
-      });
+      if (exactHS) {
 
-    } else {
+        console.log(
+          "HS FOUND:",
+          userMessage
+        );
 
-      res.json({
+        return res.json({
+          reply: buildReply(exactHS)
+        });
+
+      }
+
+      console.log(
+        "HS NOT FOUND:",
+        userMessage
+      );
+
+      return res.json({
         reply:
-          "Xin lỗi, tôi chưa hiểu."
+          `HS code ${userMessage} không thuộc diện kiểm tra chất lượng.`
       });
 
     }
 
+    // ====================================
+    // TÌM CHÍNH XÁC CÂU HỎI
+    // ====================================
+
+    const exactQuestion =
+      data.find(item =>
+        String(item.question || "")
+          .trim()
+          .toLowerCase() ===
+        userMessage.toLowerCase()
+      );
+
+    if (exactQuestion) {
+
+      return res.json({
+        reply: buildReply(exactQuestion)
+      });
+
+    }
+
+    // ====================================
+    // LOẠI BỎ CÁC DÒNG HS CODE
+    // KHỎI FUSE SEARCH
+    // ====================================
+
+    const searchData =
+      data.filter(item => {
+
+        const question =
+          String(item.question || "").trim();
+
+        return !/^\d{6,12}$/.test(question);
+
+      });
+
+    // ====================================
+    // CHUẨN BỊ TỪ KHÓA
+    // ====================================
+
+    const preparedData =
+      searchData.map(item => ({
+
+        ...item,
+
+        keywords: [
+          item.question || "",
+          item.node || ""
+        ].join(" ")
+
+      }));
+
+    // ====================================
+    // FUSE SEARCH
+    // ====================================
+
+    const fuse = new Fuse(
+      preparedData,
+      {
+        keys: [
+          {
+            name: "question",
+            weight: 0.7
+          },
+          {
+            name: "keywords",
+            weight: 0.3
+          }
+        ],
+
+        threshold: 0.3,
+
+        ignoreLocation: true,
+
+        includeScore: true,
+
+        minMatchCharLength: 2
+      }
+    );
+
+    const results =
+      fuse.search(userMessage);
+
+    if (
+      results.length > 0 &&
+      results[0].score < 0.4
+    ) {
+
+      return res.json({
+        reply:
+          buildReply(results[0].item)
+      });
+
+    }
+
+    // ====================================
+    // KHÔNG TÌM THẤY
+    // ====================================
+
+    return res.json({
+      reply:
+        "Xin lỗi, tôi chưa tìm thấy thông tin phù hợp."
+    });
+
   } catch (error) {
 
-    console.log(error);
+    console.error(error);
 
-    res.json({
-      reply: "Lỗi server"
+    return res.json({
+      reply:
+        "Lỗi server, vui lòng thử lại."
     });
 
   }
-
 });
 
+// =========================
+// START SERVER
+// =========================
 const PORT =
   process.env.PORT || 3000;
 
 app.listen(PORT, () => {
 
   console.log(
-    "Bot đang chạy trên cổng " + PORT
+    `Server đang chạy tại cổng ${PORT}`
   );
 
 });
