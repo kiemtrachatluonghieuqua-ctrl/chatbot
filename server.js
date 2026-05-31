@@ -60,19 +60,25 @@ app.get("/", (req, res) => {
 // =========================
 // CHAT API
 // =========================
+
 app.post("/chat", async (req, res) => {
-
-  return res.json({
-    reply: "TEST VERSION 999999"
-  });
-
-});
-
-    console.log("USER INPUT:", userMessage);
+  try {
+    const userMessage = String(req.body.message || "").trim();
 
     const data = await getData();
-console.log("FIRST ROW:", data[0]);
-console.log("SECOND ROW:", data[1]);
+
+    return res.json({
+      reply: `OK: ${userMessage} - Rows: ${data.length}`
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.json({
+      reply: "Lỗi server"
+    });
+  }
+});
     // ====================================
     // TRA CỨU HS CODE CHÍNH XÁC TUYỆT ĐỐI
     // ====================================
