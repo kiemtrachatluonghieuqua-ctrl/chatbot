@@ -41,27 +41,48 @@ async function getData() {
 // =========================
 // TẠO CÂU TRẢ LỜI
 // =========================
-function buildReply(item) {
+function buildReply(item, allData) {
 
   let reply = item.answer || "";
 
-  if (item.related) {
+  const topic =
+    String(item.related || "")
+      .trim()
+      .toLowerCase();
 
-    const related = item.related
-      .split(";")
-      .map(x => x.trim())
-      .filter(Boolean);
+  if (!topic) {
+    return reply;
+  }
 
-    if (related.length > 0) {
+  const relatedQuestions =
+    allData
+      .filter(row => {
+
+        const rowTopic =
+          String(row.related || "")
+            .trim()
+            .toLowerCase();
+
+        return (
+          rowTopic === topic &&
+          row.question !== item.question
+        );
+
+      })
+      .slice(0, 5);
+
+  if (relatedQuestions.length > 0) {
+
+    reply +=
+      "<br><br><b>Có thể bạn quan tâm thêm:</b><br>";
+
+    relatedQuestions.forEach(q => {
 
       reply +=
-        "<br><br><b>Có thể bạn muốn hỏi thêm:</b><br>";
+        `• ${q.question}<br>`;
 
-      related.forEach(q => {
-        reply += `• ${q}<br>`;
-      });
+    });
 
-    }
   }
 
   return reply;
@@ -121,7 +142,7 @@ app.post("/chat", async (req, res) => {
 
         return res.json({
           reply:
-            buildReply(exactHS)
+            buildReply(exactHS, data)
         });
 
       }
@@ -155,7 +176,7 @@ app.post("/chat", async (req, res) => {
 
       return res.json({
         reply:
-          buildReply(exactQuestion)
+          buildReply(exactQuestion, data)
       });
 
     }
@@ -244,7 +265,8 @@ app.post("/chat", async (req, res) => {
       return res.json({
         reply:
           buildReply(
-            results[0].item
+            results[0].item, 
+            data
           )
       });
 
