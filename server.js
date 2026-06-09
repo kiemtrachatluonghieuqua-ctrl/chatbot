@@ -1,4 +1,3 @@
-
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
@@ -13,6 +12,19 @@ const SHEET_ID =
   "1Af13VPgO-vr_DOeJ-7nBJh9wDBb9PHY-ls9dez2piG4";
 
 const SHEET_NAME = "Sheet1";
+
+// =========================
+// CHUẨN HÓA TIẾNG VIỆT
+// =========================
+function normalizeText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .trim();
+}
 
 // =========================
 // LẤY DỮ LIỆU TỪ GOOGLE SHEET
@@ -30,21 +42,25 @@ async function getData() {
 // TẠO CÂU TRẢ LỜI
 // =========================
 function buildReply(item) {
+
   let reply = item.answer || "";
 
   if (item.related) {
+
     const related = item.related
       .split(";")
       .map(x => x.trim())
       .filter(Boolean);
 
     if (related.length > 0) {
+
       reply +=
         "<br><br><b>Có thể bạn muốn hỏi thêm:</b><br>";
 
       related.forEach(q => {
         reply += `• ${q}<br>`;
       });
+
     }
   }
 
@@ -62,6 +78,7 @@ app.get("/", (req, res) => {
 // CHAT API
 // =========================
 app.post("/chat", async (req, res) => {
+
   try {
 
     const userMessage =
@@ -71,10 +88,10 @@ app.post("/chat", async (req, res) => {
 
     const data = await getData();
 
-    // =========================
-    // DEBUG LOG
-    // =========================
-    console.log("TOTAL ROWS:", data.length);
+    console.log(
+      "TOTAL ROWS:",
+      data.length
+    );
 
     // =========================
     // TRA CỨU HS CODE CHÍNH XÁC
@@ -84,14 +101,16 @@ app.post("/chat", async (req, res) => {
 
     if (isHSCode) {
 
-      const exactHS = data.find(item => {
+      const exactHS =
+        data.find(item => {
 
-        const question =
-          String(item.question || "").trim();
+          const question =
+            String(item.question || "")
+              .trim();
 
-        return question === userMessage;
+          return question === userMessage;
 
-      });
+        });
 
       if (exactHS) {
 
@@ -101,7 +120,8 @@ app.post("/chat", async (req, res) => {
         );
 
         return res.json({
-          reply: buildReply(exactHS)
+          reply:
+            buildReply(exactHS)
         });
 
       }
@@ -119,49 +139,62 @@ app.post("/chat", async (req, res) => {
     }
 
     // =========================
-    // TÌM CÂU HỎI CHÍNH XÁC
+    // TÌM KIẾM CHÍNH XÁC CÂU HỎI
     // =========================
     const exactQuestion =
-      data.find(item =>
-        String(item.question || "")
-          .trim()
-          .toLowerCase() ===
-        userMessage.toLowerCase()
-      );
+      data.find(item => {
+
+        return (
+          normalizeText(item.question) ===
+          normalizeText(userMessage)
+        );
+
+      });
 
     if (exactQuestion) {
 
       return res.json({
-        reply: buildReply(exactQuestion)
+        reply:
+          buildReply(exactQuestion)
       });
 
     }
 
     // =========================
-    // LOẠI HS CODE KHỎI FUSE
+    // LOẠI BỎ HS CODE KHỎI FUSE
     // =========================
     const searchData =
       data.filter(item => {
 
         const question =
-          String(item.question || "").trim();
+          String(item.question || "")
+            .trim();
 
         return !/^\d{6,12}$/.test(question);
 
       });
 
     // =========================
-    // CHUẨN BỊ KEYWORDS
+    // CHUẨN HÓA DỮ LIỆU
     // =========================
     const preparedData =
       searchData.map(item => ({
 
         ...item,
 
-        keywords: [
-          item.question || "",
-          item.node || ""
-        ].join(" ")
+        normalizedQuestion:
+          normalizeText(
+            item.question
+          ),
+
+        keywords:
+          normalizeText(
+            [
+              item.question || "",
+              item.node || "",
+              item.answer || ""
+            ].join(" ")
+          )
 
       }));
 
@@ -173,16 +206,18 @@ app.post("/chat", async (req, res) => {
       {
         keys: [
           {
-            name: "question",
-            weight: 0.7
+            name:
+              "normalizedQuestion",
+            weight: 0.8
           },
           {
-            name: "keywords",
-            weight: 0.3
+            name:
+              "keywords",
+            weight: 0.2
           }
         ],
 
-        threshold: 0.3,
+        threshold: 0.45,
         ignoreLocation: true,
         includeScore: true,
         minMatchCharLength: 2
@@ -190,22 +225,53 @@ app.post("/chat", async (req, res) => {
     );
 
     const results =
-      fuse.search(userMessage);
+      fuse.search(
+        normalizeText(
+          userMessage
+        )
+      );
+
+    console.log(
+      "FUSE RESULTS:",
+      results.slice(0, 3)
+    );
 
     if (
       results.length > 0 &&
-      results[0].score < 0.4
+      results[0].score < 0.5
     ) {
 
       return res.json({
         reply:
-          buildReply(results[0].item)
+          buildReply(
+            results[0].item
+          )
       });
 
     }
 
     // =========================
-    // KHÔNG TÌM THẤY
+    // GỢI Ý 3 CÂU HỎI GẦN NHẤT
+    // =========================
+    if (results.length > 0) {
+
+      const suggestions =
+        results
+          .slice(0, 3)
+          .map(
+            r => `• ${r.item.question}`
+          )
+          .join("<br>");
+
+      return res.json({
+        reply:
+          `Tôi chưa tìm thấy câu trả lời chính xác.<br><br><b>Có thể bạn muốn hỏi:</b><br>${suggestions}`
+      });
+
+    }
+
+    // =========================
+    // KHÔNG TÌM THẤY GÌ
     // =========================
     return res.json({
       reply:
@@ -222,6 +288,7 @@ app.post("/chat", async (req, res) => {
     });
 
   }
+
 });
 
 // =========================
